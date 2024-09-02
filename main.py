@@ -11,6 +11,7 @@ def post_execution(body: dict):
     return new_execution
 
 
+# atualiza os campos da solicitação de execução
 def update_execution(execution_id: str, payload: dict):
     updated_execution = execution_service.update_execution(
         execution_id=execution_id, body=payload
@@ -21,8 +22,8 @@ def update_execution(execution_id: str, payload: dict):
     return updated_execution
 
 
-# Decide o próximo step
-def orquestrador(execution_id: str):
+# Decide o próximo passo
+def orchestrator(execution_id: str):
 
     try:
         execution_data = execution_service.get_execution_data(execution_id=execution_id)
@@ -39,7 +40,7 @@ def orquestrador(execution_id: str):
     return "agent-diagnose-incident"
 
 
-def call_next_step(execution_id: str, next_step: str = ""):
+def call_next_step(next_step: str = ""):
     agents = {
         "agent-automation-identification": {"automation_name": "Automation Name"},
         "agent-diagnose-incident": {"diagnose": "Diagnose"},
@@ -49,8 +50,6 @@ def call_next_step(execution_id: str, next_step: str = ""):
 
 
 def main():
-    # Create execution
-
     incident = {
         "id": "INC123456789",
         "additional_information": json.dumps({"aws_account": "123456789012"}),
@@ -63,7 +62,7 @@ def main():
     execution_id = execution["executionId"]
 
     while True:
-        next_step = orquestrador(execution_id=execution_id)
+        next_step = orchestrator(execution_id=execution_id)
         print("\nNext step: ", next_step, "\n")
 
         if next_step == "finished":
@@ -73,7 +72,7 @@ def main():
             )
             break
 
-        result = call_next_step(execution_id=execution_id, next_step=next_step)
+        result = call_next_step(next_step=next_step)
         update_execution(execution_id=execution_id, payload=result)
 
 
