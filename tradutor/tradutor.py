@@ -6,8 +6,26 @@ def get_input_value(input_data: dict, caminho: str):
     path = caminho.strip("$.").split(".")
 
     for key in path:
+        index = None
+
+        if '[' in key and ']' in key:
+            key_splitted: list[str] = key.split("[")
+            key = key_splitted[0]
+
+            index = key_splitted[1].replace("]", "")
+
+            if index.isdigit():
+                index = int(index)
+            else:
+                raise ValueError(f"Só é possível ler números inteiros como index para listas e não '{index}'")
+
+
         if key in value:
             value = value[key]
+                          
+            if index is not None:
+                value = value[index]
+
             continue
 
         value = None

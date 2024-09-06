@@ -18,5 +18,5 @@ CONFIG_AGENTES = {
         },
         "severity": "$.severity",
     },
-    "agent_3": "$",
+    "agent_3": "$.list[01]",
 }

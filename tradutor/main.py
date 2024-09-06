@@ -19,6 +19,7 @@ def main():
         "incident_id": "INC1234567890",
         "additional_information": {"KEY1": {"KEY2": "VALUE2"}},
         "severity": "HIGH",
+        "list": [{"KEY1": {"KEY2": [{"KEY1": {"KEY2": "VALUE2"}}, "item index 1"]}}, "item index 1"]
     }
 
     agent_input = make_agent_input(
