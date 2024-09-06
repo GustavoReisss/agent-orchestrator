@@ -1,14 +1,21 @@
+import re
+
+# KEY_WITH_INDEX_REGEX = r"\[\d+\]" # verifica se o digito dentro do colchete é númerico
+KEY_WITH_INDEX_REGEX = r"\[.*?\]" # libera qualquer caracter dentro dos colchetes
+
+
 def get_input_value(input_data: dict, caminho: str):
     if caminho == "$":
         return input_data
 
     value = input_data
     path = caminho.strip("$.").split(".")
+    
 
     for key in path:
         index = None
 
-        if '[' in key and ']' in key:
+        if re.search(KEY_WITH_INDEX_REGEX, key):
             key_splitted: list[str] = key.split("[")
             key = key_splitted[0]
 
