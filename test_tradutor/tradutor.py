@@ -17,8 +17,8 @@ def get_input_value(input_data: dict, caminho: str):
 
         if re.search(KEY_WITH_INDEX_REGEX, key):
             key_splitted: list[str] = key.split("[")
-            key = key_splitted[0]
 
+            key = key_splitted[0]
             index = key_splitted[1].replace("]", "")
 
             if index.isdigit():

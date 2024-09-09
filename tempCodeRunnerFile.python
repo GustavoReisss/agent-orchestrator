@@ -1,1 +1,1 @@
-print("$.incident".strip("$.").split("."))
+print('sim' if [''] else 'nao')

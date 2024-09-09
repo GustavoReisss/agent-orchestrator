@@ -1,79 +1,78 @@
-from src.Services.execution_service import ExecutionService, ExecutionNotFoundException
-from src.Entities.Models.execution_model import ExecutionStatusEnum
-import json
-
-execution_service = ExecutionService()
-
-
-# Salva solicitação de execução no banco de dados
-def post_execution(body: dict):
-    new_execution = execution_service.create_execution(payload=body)
-    return new_execution
+from src.Services.execution_service import ExecutionService
+from src.Entities.Models.execution_model import ExecutionStep, StepStatusEnum
+from src.Services.agent_service import AgentService
+from src.Utils.tradutor import apply_translation
 
 
-# atualiza os campos da solicitação de execução
-def update_execution(execution_id: str, payload: dict):
-    updated_execution = execution_service.update_execution(
-        execution_id=execution_id, body=payload
+class NoMoreStepsRemaningException(Exception):
+    pass
+
+
+FIELDS_TO_EXCLUDE = ["steps", "status", "created_on", "update_on"]
+
+
+def get_current_step(steps: list[ExecutionStep]):
+    current_step = next(
+        (step for step in steps if step.status == StepStatusEnum.waiting), None
     )
 
-    print(updated_execution)
+    if current_step is None:
+        raise NoMoreStepsRemaningException()
 
-    return updated_execution
-
-
-# Decide o próximo passo
-def orchestrator(execution_id: str):
-
-    try:
-        execution_data = execution_service.get_execution_data(execution_id=execution_id)
-
-    except ExecutionNotFoundException:
-        print(f"Execution Id '{execution_id}' not found on database")
-
-    if "automation_name" in execution_data:
-        return "finished"
-
-    if "diagnose" in execution_data:
-        return "agent-automation-identification"
-
-    return "agent-diagnose-incident"
+    return current_step
 
 
-def call_next_step(next_step: str = ""):
-    agents = {
-        "agent-automation-identification": {"automation_name": "Automation Name"},
-        "agent-diagnose-incident": {"diagnose": "Diagnose"},
+def make_next_step_payload(execution_id: str):
+    execution_data = ExecutionService().get_execution_data(execution_id=execution_id)
+
+    steps = execution_data.steps
+
+    current_step = get_current_step(steps)
+    # print(current_step)
+
+    agent = AgentService().get_agent_data(agent_name=current_step.action)
+
+    agent_payload = apply_translation(
+        template=current_step.input_template,
+        data=execution_data.model_dump(exclude=FIELDS_TO_EXCLUDE),
+    )
+
+    # print(agent_payload)
+
+    return {
+        "executionId": execution_id,
+        "agentName": agent.agentName,
+        "payload": agent_payload,
+        "step_function_arn": agent.step_function_arn,
     }
 
-    return agents.get(next_step, {})
+
+def execute_step_and_get_response(step_payload: dict):
+    mock_responses = {
+        "agente_diagnostico": {
+            "diagnose": f"Diagnóstico do problema: {step_payload['payload']['description']}"
+        },
+        "agente_automation": {"automation_name": "resolve-alerta-xpto"},
+    }
+
+    print(f"\nCurrent Step: {step_payload['agentName']}")
+
+    return mock_responses[step_payload["agentName"]]
+
+
+def execute_orchestration(execution_id: str):
+    step_function_payload = make_next_step_payload(execution_id=execution_id)
+    print(step_function_payload)
+
+    step_response = execute_step_and_get_response(step_payload=step_function_payload)
+
+    print(step_response)
 
 
 def main():
-    incident = {
-        "id": "INC123456789",
-        "additional_information": json.dumps({"aws_account": "123456789012"}),
-    }
+    execution_id = "36833ea4-447b-4948-8e8f-37d0a02c5794"
 
-    execution = post_execution(body=incident)
-
-    print(execution)
-
-    execution_id = execution["executionId"]
-
-    while True:
-        next_step = orchestrator(execution_id=execution_id)
-        print("\nNext step: ", next_step, "\n")
-
-        if next_step == "finished":
-            update_execution(
-                execution_id=execution_id,
-                payload={"status": ExecutionStatusEnum.finished},
-            )
-            break
-
-        result = call_next_step(next_step=next_step)
-        update_execution(execution_id=execution_id, payload=result)
+    execute_orchestration(execution_id)
 
 
 if __name__ == "__main__":
